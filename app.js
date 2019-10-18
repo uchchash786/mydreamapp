@@ -9,7 +9,7 @@ const passport = require("passport");
 const passportLocalMongoose = require("passport-local-mongoose");
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const findOrCreate = require('mongoose-findorcreate');
-
+const beautifyUnique = require('mongoose-beautiful-unique-validation');
 const app = express();
 
 app.use(express.static("public"));
@@ -28,7 +28,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 const options={
-    // useUnifiedTopology: true ,
+    useUnifiedTopology: true ,
    useNewUrlParser: true
 
 };
@@ -38,19 +38,34 @@ db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', function() {
   console.log("we're connected!");});
 mongoose.set('useCreateIndex', true);
+const patientSchema = new mongoose.Schema ({
+patientname: String,
+age: String,
+sex: String,
+adress: String,
+contactNo:Number,
+dateOfVisit:Date,
+  chiefCompalaints:String,
+  historyofPresentingIlness:String,
+  historyofpastingIlness:String,
+});
 const userSchema = new mongoose.Schema ({
   email: String,
   password: String,
   googleId: String,
-  secret: String
+  secret:{
+    fullName:String,nameOfMedicalCollege:String,medicalsession:String,bmdcRegiNo:String,
+    } ,
+  myPatientProfile:patientSchema
 });
+
 mongoose.set("useCreateIndex", true);
 
 
 
 userSchema.plugin(passportLocalMongoose);
 userSchema.plugin(findOrCreate);
-
+const Patient = new mongoose.model("Patient", patientSchema);
 const User = new mongoose.model("User", userSchema);
 
 passport.use(User.createStrategy());
@@ -72,7 +87,7 @@ passport.use(new GoogleStrategy({
     userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo"
   },
   function(accessToken, refreshToken, profile, cb) {
-    console.log(profile);
+    // console.log(profile);
 
     User.findOrCreate({ googleId: profile.id }, function (err, user) {
       return cb(err, user);
@@ -103,16 +118,13 @@ app.get("/register", function(req, res){
   res.render("register");
 });
 
-app.get("/secrets", function(req, res){
-  User.find({"secret": {$ne: null}}, function(err, foundUsers){
-    if (err){
-      console.log(err);
-    } else {
-      if (foundUsers) {
-        res.render("secrets", {usersWithSecrets: foundUsers});
-      }
-    }
-  });
+app.get("/secrets",function(req,res){
+if (req.isAuthenticated()) {
+  res.render("secrets");
+
+} else {
+  res.redirect("/login");
+}
 });
 
 app.get("/submit", function(req, res){
@@ -122,10 +134,43 @@ app.get("/submit", function(req, res){
     res.redirect("/login");
   }
 });
-
 app.post("/submit", function(req, res){
-  const submittedSecret = req.body.secret;
+  const submittedpatientName = req.body.patientname;
+const submittedpatientage = req.body.patientage;
+const submittedsex = req.body.sex;
+const submittedadress = req.body.adress;
+const submittedcontactNo = req.body.contactNo;
+const submitteddate = req.body.date;
+const submittedchiefCompalaints = req.body.chiefCompalaints;
+const submittedhistoryofPresentingIlness = req.body.historyofPresentingIlness;
+const submittedhistoryofpastingIlness = req.body.historyofpastingIlness;
+//Once the user is authenticated and their session gets saved, their user details are saved to req.user.
+  // console.log(req.user.id);
+const newPatient= new Patient({
+  patientname: submittedpatientName,
+  age: submittedpatientage,
+  sex: submittedsex,
+  adress:submittedadress,
+  contactNo:submittedcontactNo,
+  dateOfVisit:submitteddate,
+    chiefCompalaints:submittedchiefCompalaints ,
+    historyofPresentingIlness:submittedhistoryofPresentingIlness,
+    historyofpastingIlness:submittedhistoryofpastingIlness,
+});
+newPatient.save(function(err){
+if (err) {
+  console.log(err);
+} else {
+    res.send("succesfully saved");
+}
 
+    });
+  });
+app.post("/secrets", function(req, res){
+  const submittedName = req.body.name;
+const submittedMedicalCollegeName = req.body.medicalCollegeName;
+const submittedSession = req.body.session;
+const submittedbmdcRegNo = req.body.bmdcRegNo;
 //Once the user is authenticated and their session gets saved, their user details are saved to req.user.
   // console.log(req.user.id);
 
@@ -134,13 +179,22 @@ app.post("/submit", function(req, res){
       console.log(err);
     } else {
       if (foundUser) {
-        foundUser.secret = submittedSecret;
-        foundUser.save(function(){
-          res.redirect("/secrets");
+        foundUser.secret.fullName=submittedName;
+        foundUser.secret.nameOfMedicalCollege=submittedMedicalCollegeName;
+        foundUser.secret.medicalsession=submittedSession;
+          foundUser.secret.bmdcRegiNo=submittedbmdcRegNo;
+            }
+        foundUser.save(function(err){
+if (err) {
+  console.log(err);
+} else {
+    res.redirect("/submit");
+}
+
         });
       }
     }
-  });
+  );
 });
 
 app.get("/logout", function(req, res){
