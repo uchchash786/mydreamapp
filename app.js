@@ -56,7 +56,7 @@ const userSchema = new mongoose.Schema ({
   secret:{
     fullName:String,nameOfMedicalCollege:String,medicalsession:String,bmdcRegiNo:String,
     } ,
-  myPatientProfile:patientSchema
+  myPatientProfile:[patientSchema]
 });
 
 mongoose.set("useCreateIndex", true);
@@ -157,34 +157,33 @@ const newPatient= new Patient({
     historyofPresentingIlness:submittedhistoryofPresentingIlness,
     historyofpastingIlness:submittedhistoryofpastingIlness,
 });
-newPatient.save(function(err){
-if (err) {
-  console.log(err);
-} else {
-    res.send("succesfully saved");
-}
 
-    });
 
     User.findById(req.user.id, function(err, foundUser){
       if (err) {
         console.log(err);
       } else {
         if (foundUser) {
-          foundUser.myPatientProfile=newPatient;
-        }
-          foundUser.save(function(err){
-        if (err) {
-        console.log(err);
-        } else {
-        res.send("successfully saved");
-        }
 
-      });
-    }
-  }
-  );
+         console.log(foundUser.myPatientProfile);
+         foundUser.myPatientProfile.push(newPatient);
+     foundUser.save(function(err){
+     if (err) {
+       console.log(err);
+     } else {
+         res.send("succesfully saved");
+     }
+
+         });
+
+
+
+  }}
   });
+});
+
+
+
 app.post("/secrets", function(req, res){
   const submittedName = req.body.name;
 const submittedMedicalCollegeName = req.body.medicalCollegeName;
