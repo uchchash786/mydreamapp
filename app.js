@@ -165,6 +165,25 @@ if (err) {
 }
 
     });
+
+    User.findById(req.user.id, function(err, foundUser){
+      if (err) {
+        console.log(err);
+      } else {
+        if (foundUser) {
+          foundUser.myPatientProfile=newPatient;
+        }
+          foundUser.save(function(err){
+        if (err) {
+        console.log(err);
+        } else {
+        res.send("successfully saved");
+        }
+
+      });
+    }
+  }
+  );
   });
 app.post("/secrets", function(req, res){
   const submittedName = req.body.name;
